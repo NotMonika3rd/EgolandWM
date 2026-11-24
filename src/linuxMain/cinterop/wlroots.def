@@ -1,0 +1,28 @@
+package = wlr
+
+headers = wlr/backend.h \
+          wlr/render/wlr_renderer.h \
+          wlr/render/allocator.h \
+          wlr/types/wlr_compositor.h \
+          wlr/types/wlr_data_device.h \
+          wlr/types/wlr_scene.h \
+          wlr/types/wlr_output.h \
+          wlr/types/wlr_output_layout.h \
+          wlr/types/wlr_seat.h \
+          wlr/types/wlr_keyboard.h \
+          wlr/interfaces/wlr_keyboard.h \
+          wlr/types/wlr_cursor.h \
+          wlr/types/wlr_xcursor_manager.h \
+          wlr/types/wlr_xdg_shell.h \
+          wlr/types/wlr_xdg_decoration_v1.h \
+          wlr/xwayland/xwayland.h \
+          wayland-server-core.h \
+          wlr_helpers.h
+
+compilerOpts = -DWLR_USE_UNSTABLE -DWLR_PRIVATE= -std=gnu11 \
+               -I/usr/include \
+               -I/usr/include/wlroots-0.20 \
+               -I/usr/include/pixman-1 \
+               -I/usr/include/libdrm
+
+linkerOpts = -L/usr/lib --allow-shlib-undefined -lwlroots-0.20 -lwayland-server -lxkbcommon -lxcb -lxcb-ewmh -lxcb-icccm -lpixman-1

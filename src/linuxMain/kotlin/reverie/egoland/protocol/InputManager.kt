@@ -1,8 +1,12 @@
 @file:OptIn(ExperimentalForeignApi::class)
 
-package reverie.egoland
+package reverie.egoland.protocol
 
 import kotlinx.cinterop.*
+import reverie.egoland.SignalListener
+import reverie.egoland.Window
+import reverie.egoland.HitResult
+import reverie.egoland.Server
 import wlr.*
 
 sealed class Interaction {

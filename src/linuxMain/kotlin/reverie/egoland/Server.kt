@@ -6,6 +6,7 @@ import cnames.structs.wl_display
 import cnames.structs.wl_event_loop
 import kotlinx.cinterop.*
 import platform.posix.system
+import reverie.egoland.protocol.*
 import wlr.*
 
 typealias SignalCallback = (CPointer<wl_listener>?, COpaquePointer?) -> Unit

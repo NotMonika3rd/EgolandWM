@@ -1,9 +1,12 @@
 @file:OptIn(ExperimentalForeignApi::class)
 
-package reverie.egoland
+package reverie.egoland.protocol
 
 import kotlinx.cinterop.*
 import platform.posix.setenv
+import reverie.egoland.Server
+import reverie.egoland.SignalListener
+import reverie.egoland.Window
 import wlr.*
 
 class XWaylandManager(val server: Server) {

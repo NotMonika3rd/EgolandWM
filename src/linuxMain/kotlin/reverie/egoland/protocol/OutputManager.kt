@@ -1,9 +1,11 @@
 @file:OptIn(ExperimentalForeignApi::class)
 
-package reverie.egoland
+package reverie.egoland.protocol
 
 import kotlinx.cinterop.*
 import platform.posix.CLOCK_MONOTONIC
+import reverie.egoland.Server
+import reverie.egoland.SignalListener
 import wlr.*
 
 class Output(

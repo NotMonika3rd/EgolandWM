@@ -96,6 +96,17 @@ struct wl_signal *wlr_shim_output_frame(struct wlr_output *output) {
     return &output->events.frame;
 }
 
+void wlr_shim_output_ensure_refresh(struct wlr_output *output, int32_t refresh) {
+    struct wlr_output_mode *mode;
+    wl_list_for_each(mode, &output->modes, link) {
+        if (mode->refresh <= 0) mode->refresh = refresh;
+    }
+    if (output->current_mode != NULL && output->current_mode->refresh <= 0) {
+        output->current_mode->refresh = refresh;
+    }
+    if (output->refresh <= 0) output->refresh = refresh;
+}
+
 struct wl_signal *wlr_shim_output_destroy(struct wlr_output *output) {
     return &output->events.destroy;
 }

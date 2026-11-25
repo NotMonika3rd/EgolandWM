@@ -57,6 +57,7 @@ struct wl_signal *wlr_shim_backend_new_output(struct wlr_backend *backend);
 struct wl_signal *wlr_shim_backend_new_input(struct wlr_backend *backend);
 struct wl_signal *wlr_shim_backend_destroy(struct wlr_backend *backend);
 struct wl_signal *wlr_shim_output_frame(struct wlr_output *output);
+void wlr_shim_output_ensure_refresh(struct wlr_output *output, int32_t refresh);
 struct wl_signal *wlr_shim_output_destroy(struct wlr_output *output);
 struct wl_signal *wlr_shim_xdg_shell_new_toplevel(struct wlr_xdg_shell *shell);
 struct wl_signal *wlr_shim_layer_shell_new_surface(struct wlr_layer_shell_v1 *shell);

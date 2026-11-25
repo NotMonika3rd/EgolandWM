@@ -70,6 +70,7 @@ class Output(
             }
             wlr_output_state_finish(state.ptr)
         }
+        wlr_shim_output_ensure_refresh(wlrOutput, 60_000)
     }
 
     fun dispose() {

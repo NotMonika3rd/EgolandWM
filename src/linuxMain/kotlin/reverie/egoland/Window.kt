@@ -23,6 +23,7 @@ class Window(
     var geomY: Int = 0
     var maximized: Boolean = false
     var minimized: Boolean = false
+    private var xdgStateApplied: Boolean = false
     var savedX: Int = 0
     var savedY: Int = 0
     var savedWidth: Int = 0
@@ -71,12 +72,13 @@ class Window(
 
     fun reapplyXdgState() {
         val surface = xdgSurface ?: return
-        if (!xdgReady) return
+        if (xdgStateApplied || !xdgReady) return
         val toplevel = wlr_shim_xdg_surface_toplevel(surface) ?: return
         wlr_shim_xdg_toplevel_set_size(toplevel, width, height)
         wlr_xdg_toplevel_set_activated(toplevel, active)
         wlr_xdg_toplevel_set_maximized(toplevel, maximized)
         wlr_xdg_toplevel_set_suspended(toplevel, minimized)
+        xdgStateApplied = true
     }
 
     fun notifyGeometry() {

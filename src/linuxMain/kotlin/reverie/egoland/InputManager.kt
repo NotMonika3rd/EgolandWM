@@ -46,6 +46,7 @@ class InputManager(val server: Server) {
     private val motionListener = SignalListener()
     private val motionAbsoluteListener = SignalListener()
     private val buttonListener = SignalListener()
+    private val axisListener = SignalListener()
     private val keyboardListeners = mutableListOf<KeyboardBinding>()
 
     fun init() {
@@ -65,6 +66,8 @@ class InputManager(val server: Server) {
         motionAbsoluteListener.connect(wlr_shim_cursor_motion_absolute(c)!!)
         buttonListener.onSignal = { _, data -> onButton(data!!) }
         buttonListener.connect(wlr_shim_cursor_button(c)!!)
+        axisListener.onSignal = { _, data -> onAxis(data!!) }
+        axisListener.connect(wlr_shim_cursor_axis(c)!!)
     }
 
     fun startMoveFromRequest(window: Window) {
@@ -95,14 +98,14 @@ class InputManager(val server: Server) {
             window.restoreGeometry()
         }
         window.maximized = maximized
-        toplevel?.let { wlr_xdg_toplevel_set_maximized(it, maximized) }
+        if (window.xdgReady) toplevel?.let { wlr_xdg_toplevel_set_maximized(it, maximized) }
         window.notifyGeometry()
     }
 
     fun setMinimizedFromRequest(window: Window, minimized: Boolean) {
         val toplevel = window.xdgSurface?.let { wlr_shim_xdg_surface_toplevel(it) }
         window.minimized = minimized
-        toplevel?.let { wlr_xdg_toplevel_set_suspended(it, minimized) }
+        if (window.xdgReady) toplevel?.let { wlr_xdg_toplevel_set_suspended(it, minimized) }
         wlr_scene_node_set_enabled(window.node, !minimized)
         if (minimized) {
             lastMinimized = window
@@ -176,6 +179,16 @@ class InputManager(val server: Server) {
     }
 
     private fun pointerTargetAt(cx: Int, cy: Int): PointerTarget? {
+        val layer = server.layerManager.surfaceAt(cx, cy)
+        if (layer != null) {
+            return PointerTarget(
+                layer.surface,
+                (cx - layer.x).toDouble(),
+                (cy - layer.y).toDouble(),
+                null,
+                null
+            )
+        }
         val popup = server.windowManager.popupAt(cx, cy)
         if (popup != null) {
             return PointerTarget(
@@ -344,6 +357,32 @@ class InputManager(val server: Server) {
         }
     }
 
+    private fun onAxis(data: COpaquePointer) {
+        val c = cursor ?: return
+        memScoped {
+            val time = alloc<UIntVar>()
+            val source = alloc<UIntVar>()
+            val orientation = alloc<UIntVar>()
+            val relative = alloc<UIntVar>()
+            val delta = alloc<DoubleVar>()
+            val discrete = alloc<IntVar>()
+            wlr_shim_axis_event(
+                data, time.ptr, source.ptr, orientation.ptr,
+                relative.ptr, delta.ptr, discrete.ptr
+            )
+
+            val target = pointerTargetAt(c.pointed.x.toInt(), c.pointed.y.toInt())
+            if (target != null && !wlr_seat_pointer_has_grab(server.seat)) {
+                ensurePointerEnter(target)
+            }
+            wlr_shim_seat_notify_axis(
+                server.seat, time.value, orientation.value, delta.value,
+                discrete.value, source.value, relative.value
+            )
+            wlr_seat_pointer_notify_frame(server.seat)
+        }
+    }
+
     private fun onKey(data: COpaquePointer) {
         val keycode = wlr_shim_key_event_keycode(data)
         val state = wlr_shim_key_event_state(data)
@@ -371,6 +410,7 @@ class InputManager(val server: Server) {
         motionListener.disconnect()
         motionAbsoluteListener.disconnect()
         buttonListener.disconnect()
+        axisListener.disconnect()
         keyboardListeners.forEach {
             it.keyListener.disconnect()
             it.modifierListener.disconnect()

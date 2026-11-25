@@ -15,6 +15,7 @@ headers = wlr/backend.h \
           wlr/types/wlr_xcursor_manager.h \
           wlr/types/wlr_xdg_shell.h \
           wlr/types/wlr_xdg_decoration_v1.h \
+          wlr/types/wlr_layer_shell_v1.h \
           wlr/xwayland/xwayland.h \
           wayland-server-core.h \
           wlr_helpers.h

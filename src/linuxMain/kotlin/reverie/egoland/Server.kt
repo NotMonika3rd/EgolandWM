@@ -68,11 +68,14 @@ class Server {
         private set
     var xdgDecorationManager: CPointer<wlr_xdg_decoration_manager_v1>? = null
         private set
+    var layerShell: CPointer<wlr_layer_shell_v1>? = null
+        private set
     var seat: CPointer<wlr_seat>? = null
         private set
 
     val outputManager = OutputManager(this)
     val windowManager = WindowManager(this)
+    val layerManager = LayerManager(this)
     val inputManager = InputManager(this)
     val xwaylandManager = XWaylandManager(this)
 
@@ -132,6 +135,10 @@ class Server {
         if (xdgDecorationManager == null) {
             println("egoland: warning: failed to create xdg decoration manager")
         }
+        layerShell = wlr_layer_shell_v1_create(display, 4u) ?: run {
+            println("egoland: failed to create layer shell")
+            return false
+        }
         wlr_data_device_manager_create(display)
 
         seat = wlr_seat_create(display, "seat0") ?: run {
@@ -147,6 +154,7 @@ class Server {
         backendDestroyListener.connect(wlr_shim_backend_destroy(backend)!!)
 
         windowManager.init()
+        layerManager.init()
         inputManager.init()
         if (config.xwayland) {
             xwaylandManager.init()
@@ -186,6 +194,7 @@ class Server {
         if (display == null) return
         xwaylandManager.dispose()
         inputManager.dispose()
+        layerManager.dispose()
         windowManager.dispose()
         outputManager.dispose()
         newInputListener.disconnect()

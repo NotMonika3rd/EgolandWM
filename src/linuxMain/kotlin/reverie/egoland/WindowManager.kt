@@ -21,21 +21,9 @@ class Popup(
     var geomY: Int = 0
 
     fun updatePosition() {
-        var current: CPointer<wlr_scene_node>? = node
-        var ax = 0
-        var ay = 0
-        while (current != null) {
-            memScoped {
-                val nx = alloc<IntVar>()
-                val ny = alloc<IntVar>()
-                wlr_shim_scene_node_position(current, nx.ptr, ny.ptr)
-                ax += nx.value
-                ay += ny.value
-            }
-            current = wlr_shim_scene_node_parent(current)
-        }
-        x = ax
-        y = ay
+        val position = sceneNodeAbsolutePosition(node)
+        x = position.first
+        y = position.second
     }
 
     fun containsPoint(px: Int, py: Int): Boolean =
@@ -306,6 +294,7 @@ class WindowManager(val server: Server) {
         val commitListener = SignalListener()
         commitListener.onSignal = { _, _ ->
             updateWindowGeometry(window, xdgSurface)
+            window.reapplyXdgState()
             if (!configured) {
                 configured = true
                 configureIdle.schedule()

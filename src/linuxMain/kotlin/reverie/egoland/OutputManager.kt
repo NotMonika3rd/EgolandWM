@@ -90,6 +90,8 @@ class OutputManager(val server: Server) {
         outputs.add(Output(server, wlrOutput))
     }
 
+    fun firstOutput(): CPointer<wlr_output>? = outputs.firstOrNull()?.wlrOutput
+
     fun onOutputDestroyed(output: Output) {
         outputs.remove(output)
         if (outputs.isEmpty() && !terminating) {

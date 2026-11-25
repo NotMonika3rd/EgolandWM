@@ -104,6 +104,41 @@ struct wl_signal *wlr_shim_xdg_shell_new_toplevel(struct wlr_xdg_shell *shell) {
     return &shell->events.new_toplevel;
 }
 
+struct wl_signal *wlr_shim_layer_shell_new_surface(struct wlr_layer_shell_v1 *shell) {
+    return &shell->events.new_surface;
+}
+
+struct wl_signal *wlr_shim_layer_surface_destroy(struct wlr_layer_surface_v1 *surface) {
+    return &surface->events.destroy;
+}
+
+uint32_t wlr_shim_layer_surface_layer(struct wlr_layer_surface_v1 *surface) {
+    return (uint32_t)surface->current.layer;
+}
+
+uint32_t wlr_shim_layer_surface_initialized(struct wlr_layer_surface_v1 *surface) {
+    return surface->initialized ? 1u : 0u;
+}
+
+void wlr_shim_layer_surface_size(struct wlr_layer_surface_v1 *surface,
+        uint32_t *width, uint32_t *height) {
+    *width = surface->current.actual_width;
+    *height = surface->current.actual_height;
+}
+
+void wlr_shim_layer_surface_set_output(struct wlr_layer_surface_v1 *surface,
+        struct wlr_output *output) {
+    surface->output = output;
+}
+
+void wlr_shim_scene_layer_surface_configure(
+        struct wlr_scene_layer_surface_v1 *scene_surface,
+        struct wlr_box *full_area, struct wlr_box *usable_area) {
+    if (scene_surface == NULL || scene_surface->layer_surface == NULL) return;
+    if (!scene_surface->layer_surface->initialized) return;
+    wlr_scene_layer_surface_v1_configure(scene_surface, full_area, usable_area);
+}
+
 struct wl_signal *wlr_shim_xdg_toplevel_destroy(struct wlr_xdg_toplevel *toplevel) {
     return &toplevel->events.destroy;
 }
@@ -196,6 +231,10 @@ struct wl_signal *wlr_shim_cursor_button(struct wlr_cursor *cursor) {
     return &cursor->events.button;
 }
 
+struct wl_signal *wlr_shim_cursor_axis(struct wlr_cursor *cursor) {
+    return &cursor->events.axis;
+}
+
 struct wl_signal *wlr_shim_xwayland_ready(struct wlr_xwayland *xwayland) {
     return &xwayland->events.ready;
 }
@@ -251,6 +290,10 @@ struct wlr_surface *wlr_shim_xdg_surface_get_surface(struct wlr_xdg_surface *sur
 
 uint32_t wlr_shim_xdg_surface_role(struct wlr_xdg_surface *surface) {
     return (uint32_t)surface->role;
+}
+
+uint32_t wlr_shim_xdg_surface_initialized(struct wlr_xdg_surface *surface) {
+    return surface->initialized ? 1u : 0u;
 }
 
 uint32_t wlr_shim_xdg_surface_schedule_configure_if_ready(
@@ -331,6 +374,27 @@ uint32_t wlr_shim_button_event_state(void *data) {
 
 uint32_t wlr_shim_button_event_time(void *data) {
     return ((struct wlr_pointer_button_event *)data)->time_msec;
+}
+
+void wlr_shim_axis_event(void *data, uint32_t *time, uint32_t *source,
+        uint32_t *orientation, uint32_t *relative_direction,
+        double *delta, int32_t *delta_discrete) {
+    struct wlr_pointer_axis_event *event = (struct wlr_pointer_axis_event *)data;
+    *time = event->time_msec;
+    *source = (uint32_t)event->source;
+    *orientation = (uint32_t)event->orientation;
+    *relative_direction = (uint32_t)event->relative_direction;
+    *delta = event->delta;
+    *delta_discrete = event->delta_discrete;
+}
+
+void wlr_shim_seat_notify_axis(struct wlr_seat *seat, uint32_t time,
+        uint32_t orientation, double delta, int32_t delta_discrete,
+        uint32_t source, uint32_t relative_direction) {
+    wlr_seat_pointer_notify_axis(seat, time,
+        (enum wl_pointer_axis)orientation, delta, delta_discrete,
+        (enum wl_pointer_axis_source)source,
+        (enum wl_pointer_axis_relative_direction)relative_direction);
 }
 
 uint32_t wlr_shim_key_event_keycode(void *data) {

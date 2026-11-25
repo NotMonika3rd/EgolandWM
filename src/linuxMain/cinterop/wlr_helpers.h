@@ -20,6 +20,7 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/xwayland/xwayland.h>
 
 struct wlr_shim_listener {
@@ -58,6 +59,17 @@ struct wl_signal *wlr_shim_backend_destroy(struct wlr_backend *backend);
 struct wl_signal *wlr_shim_output_frame(struct wlr_output *output);
 struct wl_signal *wlr_shim_output_destroy(struct wlr_output *output);
 struct wl_signal *wlr_shim_xdg_shell_new_toplevel(struct wlr_xdg_shell *shell);
+struct wl_signal *wlr_shim_layer_shell_new_surface(struct wlr_layer_shell_v1 *shell);
+struct wl_signal *wlr_shim_layer_surface_destroy(struct wlr_layer_surface_v1 *surface);
+uint32_t wlr_shim_layer_surface_layer(struct wlr_layer_surface_v1 *surface);
+uint32_t wlr_shim_layer_surface_initialized(struct wlr_layer_surface_v1 *surface);
+void wlr_shim_layer_surface_size(struct wlr_layer_surface_v1 *surface,
+    uint32_t *width, uint32_t *height);
+void wlr_shim_layer_surface_set_output(struct wlr_layer_surface_v1 *surface,
+    struct wlr_output *output);
+void wlr_shim_scene_layer_surface_configure(
+    struct wlr_scene_layer_surface_v1 *scene_surface,
+    struct wlr_box *full_area, struct wlr_box *usable_area);
 struct wl_signal *wlr_shim_xdg_decoration_manager_new_toplevel(
     struct wlr_xdg_decoration_manager_v1 *manager);
 struct wlr_xdg_toplevel *wlr_shim_xdg_toplevel_decoration_toplevel(
@@ -85,6 +97,7 @@ struct wl_signal *wlr_shim_keyboard_modifiers(struct wlr_keyboard *keyboard);
 struct wl_signal *wlr_shim_cursor_motion(struct wlr_cursor *cursor);
 struct wl_signal *wlr_shim_cursor_motion_absolute(struct wlr_cursor *cursor);
 struct wl_signal *wlr_shim_cursor_button(struct wlr_cursor *cursor);
+struct wl_signal *wlr_shim_cursor_axis(struct wlr_cursor *cursor);
 struct wl_signal *wlr_shim_xwayland_ready(struct wlr_xwayland *xwayland);
 struct wl_signal *wlr_shim_xwayland_new_surface(struct wlr_xwayland *xwayland);
 struct wl_signal *wlr_shim_xwayland_surface_destroy(struct wlr_xwayland_surface *surface);
@@ -101,6 +114,7 @@ struct wlr_surface *wlr_shim_xdg_surface_get_surface(struct wlr_xdg_surface *sur
 void wlr_shim_xdg_surface_geometry(struct wlr_xdg_surface *surface,
     int32_t *x, int32_t *y, int32_t *width, int32_t *height);
 uint32_t wlr_shim_xdg_surface_role(struct wlr_xdg_surface *surface);
+uint32_t wlr_shim_xdg_surface_initialized(struct wlr_xdg_surface *surface);
 uint32_t wlr_shim_xdg_surface_schedule_configure_if_ready(
     struct wlr_xdg_surface *surface);
 struct wlr_surface *wlr_shim_xwayland_surface_get_surface(struct wlr_xwayland_surface *surface);
@@ -122,6 +136,12 @@ struct wlr_input_device *wlr_shim_motion_absolute_device(void *data);
 uint32_t wlr_shim_button_event_button(void *data);
 uint32_t wlr_shim_button_event_state(void *data);
 uint32_t wlr_shim_button_event_time(void *data);
+void wlr_shim_axis_event(void *data, uint32_t *time, uint32_t *source,
+    uint32_t *orientation, uint32_t *relative_direction,
+    double *delta, int32_t *delta_discrete);
+void wlr_shim_seat_notify_axis(struct wlr_seat *seat, uint32_t time,
+    uint32_t orientation, double delta, int32_t delta_discrete,
+    uint32_t source, uint32_t relative_direction);
 uint32_t wlr_shim_key_event_keycode(void *data);
 uint32_t wlr_shim_key_event_state(void *data);
 uint32_t wlr_shim_key_event_time(void *data);

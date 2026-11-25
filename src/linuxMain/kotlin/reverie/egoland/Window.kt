@@ -34,6 +34,7 @@ class Window(
         private set
 
     val decorOffset: Int get() = if (clientDecorated) 0 else DECOR_HEIGHT
+    val xdgReady: Boolean get() = xdgSurface?.let { wlr_shim_xdg_surface_initialized(it) != 0u } ?: false
 
     val listeners = mutableListOf<SignalListener>()
     var stableRef: StableRef<Window>? = null
@@ -68,9 +69,21 @@ class Window(
         configureGeometry(savedX, savedY, savedWidth, savedHeight)
     }
 
+    fun reapplyXdgState() {
+        val surface = xdgSurface ?: return
+        if (!xdgReady) return
+        val toplevel = wlr_shim_xdg_surface_toplevel(surface) ?: return
+        wlr_shim_xdg_toplevel_set_size(toplevel, width, height)
+        wlr_xdg_toplevel_set_activated(toplevel, active)
+        wlr_xdg_toplevel_set_maximized(toplevel, maximized)
+        wlr_xdg_toplevel_set_suspended(toplevel, minimized)
+    }
+
     fun notifyGeometry() {
-        xdgSurface?.let {
-            wlr_shim_xdg_toplevel_set_size(wlr_shim_xdg_surface_toplevel(it), width, height)
+        if (xdgReady) {
+            xdgSurface?.let {
+                wlr_shim_xdg_toplevel_set_size(wlr_shim_xdg_surface_toplevel(it), width, height)
+            }
         }
         xwaylandSurface?.let {
             wlr_xwayland_surface_configure(
@@ -88,7 +101,9 @@ class Window(
         val c = if (active) ACTIVE_COLOR else INACTIVE_COLOR
         borderNode?.let { wlr_shim_scene_rect_set_color(it, c[0], c[1], c[2], c[3]) }
         titleNode?.let { wlr_shim_scene_rect_set_color(it, c[0], c[1], c[2], c[3]) }
-        xdgSurface?.let { wlr_xdg_toplevel_set_activated(wlr_shim_xdg_surface_toplevel(it), active) }
+        if (xdgReady) {
+            xdgSurface?.let { wlr_xdg_toplevel_set_activated(wlr_shim_xdg_surface_toplevel(it), active) }
+        }
         xwaylandSurface?.let { wlr_xwayland_surface_activate(it, active) }
     }
 

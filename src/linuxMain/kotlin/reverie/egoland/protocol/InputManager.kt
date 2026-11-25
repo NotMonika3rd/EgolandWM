@@ -412,9 +412,8 @@ class InputManager(val server: Server) {
     }
 
     private fun onModifiers() {
-        val kb = wlr_seat_get_keyboard(server.seat) ?: return
-        val mods = wlr_keyboard_get_modifiers(kb)
-        wlr_shim_seat_notify_modifiers(server.seat, mods, 0u, 0u, 0u)
+        val keyboard = wlr_seat_get_keyboard(server.seat) ?: return
+        wlr_shim_seat_notify_keyboard_modifiers(server.seat, keyboard)
     }
 
     fun dispose() {

@@ -147,7 +147,9 @@ uint32_t wlr_shim_key_event_keycode(void *data);
 uint32_t wlr_shim_key_event_state(void *data);
 uint32_t wlr_shim_key_event_time(void *data);
 
-void wlr_shim_seat_notify_modifiers(struct wlr_seat *seat,
-    uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group);
+void wlr_shim_seat_notify_keyboard_modifiers(struct wlr_seat *seat,
+    struct wlr_keyboard *keyboard);
+void wlr_shim_seat_keyboard_enter_with_modifiers(struct wlr_seat *seat,
+    struct wlr_surface *surface);
 
 #endif

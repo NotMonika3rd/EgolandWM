@@ -308,7 +308,7 @@ class WindowManager(val server: Server) {
         windows.add(window)
         window.sendPing()
         val seat = server.seat ?: return
-        wlr_seat_keyboard_notify_enter(seat, window.surface, null, 0u, null)
+        wlr_shim_seat_keyboard_enter_with_modifiers(seat, window.surface)
     }
 
     fun addWindow(window: Window) {

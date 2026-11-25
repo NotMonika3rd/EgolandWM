@@ -420,13 +420,15 @@ uint32_t wlr_shim_key_event_time(void *data) {
     return ((struct wlr_keyboard_key_event *)data)->time_msec;
 }
 
-void wlr_shim_seat_notify_modifiers(struct wlr_seat *seat,
-        uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group) {
-    struct wlr_keyboard_modifiers mods = {
-        .depressed = depressed,
-        .latched = latched,
-        .locked = locked,
-        .group = group,
-    };
-    wlr_seat_keyboard_notify_modifiers(seat, &mods);
+void wlr_shim_seat_notify_keyboard_modifiers(struct wlr_seat *seat,
+        struct wlr_keyboard *keyboard) {
+    wlr_seat_keyboard_notify_modifiers(seat, &keyboard->modifiers);
+}
+
+void wlr_shim_seat_keyboard_enter_with_modifiers(struct wlr_seat *seat,
+        struct wlr_surface *surface) {
+    struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
+    const struct wlr_keyboard_modifiers *modifiers =
+        keyboard != NULL ? &keyboard->modifiers : NULL;
+    wlr_seat_keyboard_notify_enter(seat, surface, NULL, 0, modifiers);
 }

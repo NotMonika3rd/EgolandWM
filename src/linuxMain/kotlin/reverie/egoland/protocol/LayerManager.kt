@@ -10,9 +10,11 @@ import wlr.*
 class LayerSurface(
     val layerSurface: CPointer<wlr_layer_surface_v1>,
     val surface: CPointer<wlr_surface>,
-    val sceneSurface: CPointer<wlr_scene_layer_surface_v1>
+    val sceneSurface: CPointer<wlr_scene_layer_surface_v1>,
+    val layer: Int
 ) {
     private val node = sceneSurface.pointed.tree!!.pointed.node.ptr
+    var mapped: Boolean = false
     var x: Int = 0
         private set
     var y: Int = 0
@@ -54,8 +56,14 @@ class LayerManager(val server: Server) {
         newSurfaceListener.connect(wlr_shim_layer_shell_new_surface(shell)!!)
     }
 
-    fun surfaceAt(px: Int, py: Int): LayerSurface? = surfaces.asReversed().firstOrNull {
-        it.containsPoint(px, py)
+    fun surfaceAt(px: Int, py: Int, allowedLayers: IntRange): LayerSurface? {
+        for (layer in allowedLayers.last downTo allowedLayers.first) {
+            val hit = surfaces.asReversed().firstOrNull {
+                it.mapped && it.layer == layer && it.containsPoint(px, py)
+            }
+            if (hit != null) return hit
+        }
+        return null
     }
 
     private fun onNewSurface(data: COpaquePointer) {
@@ -69,7 +77,7 @@ class LayerManager(val server: Server) {
         val layer = wlr_shim_layer_surface_layer(layerSurface).toInt().coerceIn(0, 3)
         val parent = layerTrees[layer] ?: return
         val sceneSurface = wlr_scene_layer_surface_v1_create(parent, layerSurface) ?: return
-        val item = LayerSurface(layerSurface, surface, sceneSurface)
+        val item = LayerSurface(layerSurface, surface, sceneSurface, layer)
         surfaces.add(item)
 
         val configureListener = SignalListener()
@@ -78,12 +86,14 @@ class LayerManager(val server: Server) {
 
         val mapListener = SignalListener()
         mapListener.onSignal = { _, _ ->
+            item.mapped = true
             wlr_scene_node_set_enabled(sceneSurface.pointed.tree!!.pointed.node.ptr, true)
         }
         mapListener.connect(wlr_shim_surface_map(surface)!!)
 
         val unmapListener = SignalListener()
         unmapListener.onSignal = { _, _ ->
+            item.mapped = false
             wlr_scene_node_set_enabled(sceneSurface.pointed.tree!!.pointed.node.ptr, false)
         }
         unmapListener.connect(wlr_shim_surface_unmap(surface)!!)

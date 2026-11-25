@@ -182,17 +182,18 @@ class InputManager(val server: Server) {
         afterCursorMove(wlr_shim_motion_absolute_time(data))
     }
 
+    private fun layerTarget(layer: LayerSurface, cx: Int, cy: Int): PointerTarget =
+        PointerTarget(
+            layer.surface,
+            (cx - layer.x).toDouble(),
+            (cy - layer.y).toDouble(),
+            null,
+            null
+        )
+
     private fun pointerTargetAt(cx: Int, cy: Int): PointerTarget? {
-        val layer = server.layerManager.surfaceAt(cx, cy)
-        if (layer != null) {
-            return PointerTarget(
-                layer.surface,
-                (cx - layer.x).toDouble(),
-                (cy - layer.y).toDouble(),
-                null,
-                null
-            )
-        }
+        server.layerManager.surfaceAt(cx, cy, 2..3)?.let { return layerTarget(it, cx, cy) }
+
         val popup = server.windowManager.popupAt(cx, cy)
         if (popup != null) {
             return PointerTarget(
@@ -203,14 +204,20 @@ class InputManager(val server: Server) {
                 null
             )
         }
-        val window = server.windowManager.topmostAt(cx, cy) ?: return null
-        return PointerTarget(
-            window.surface,
-            (cx - window.x + window.geomX).toDouble(),
-            (cy - window.y - window.decorOffset + window.geomY).toDouble(),
-            null,
-            window
-        )
+
+        val window = server.windowManager.topmostAt(cx, cy)
+        if (window != null) {
+            return PointerTarget(
+                window.surface,
+                (cx - window.x + window.geomX).toDouble(),
+                (cy - window.y - window.decorOffset + window.geomY).toDouble(),
+                null,
+                window
+            )
+        }
+
+        server.layerManager.surfaceAt(cx, cy, 0..1)?.let { return layerTarget(it, cx, cy) }
+        return null
     }
 
     private fun ensurePointerEnter(target: PointerTarget) {

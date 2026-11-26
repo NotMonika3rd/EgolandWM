@@ -17,6 +17,7 @@
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
@@ -151,5 +152,14 @@ void wlr_shim_seat_notify_keyboard_modifiers(struct wlr_seat *seat,
     struct wlr_keyboard *keyboard);
 void wlr_shim_seat_keyboard_enter_with_modifiers(struct wlr_seat *seat,
     struct wlr_surface *surface);
+
+struct wl_signal *wlr_shim_seat_request_set_selection(struct wlr_seat *seat);
+struct wl_signal *wlr_shim_seat_request_start_drag(struct wlr_seat *seat);
+struct wl_signal *wlr_shim_drag_focus(struct wlr_drag *drag);
+struct wl_signal *wlr_shim_drag_motion(struct wlr_drag *drag);
+struct wl_signal *wlr_shim_drag_destroy(struct wlr_drag *drag);
+struct wlr_data_source *wlr_shim_drag_source(struct wlr_drag *drag);
+struct wlr_drag_icon *wlr_shim_drag_icon(struct wlr_drag *drag);
+struct wlr_surface *wlr_shim_drag_icon_surface(struct wlr_drag_icon *icon);
 
 #endif

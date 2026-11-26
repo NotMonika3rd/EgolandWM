@@ -13,8 +13,12 @@ import wlr.*
 
 class Popup(
     val surface: CPointer<wlr_surface>,
-    val node: CPointer<wlr_scene_node>
+    val xdgSurface: CPointer<wlr_xdg_surface>,
+    val tree: CPointer<wlr_scene_tree>,
+    val node: CPointer<wlr_scene_node>,
+    val depth: Int
 ) {
+    var mapped: Boolean = false
     var x: Int = 0
         private set
     var y: Int = 0
@@ -30,8 +34,10 @@ class Popup(
         y = position.second
     }
 
-    fun containsPoint(px: Int, py: Int): Boolean =
-        px >= x && px < x + width && py >= y && py < y + height
+    fun containsPoint(px: Int, py: Int): Boolean {
+        updatePosition()
+        return px >= x && px < x + width && py >= y && py < y + height
+    }
 }
 
 private class ConfigureIdleState(
@@ -80,8 +86,10 @@ class WindowManager(val server: Server) {
     var focused: Window? = null
         private set
 
-    fun popupAt(px: Int, py: Int): Popup? = popups.asReversed().firstOrNull {
-        it.containsPoint(px, py)
+    fun popupAt(px: Int, py: Int): Popup? {
+        val hits = popups.filter { it.mapped && it.containsPoint(px, py) }
+        val deepest = hits.maxOfOrNull { it.depth } ?: return null
+        return hits.lastOrNull { it.depth == deepest }
     }
 
     private val newToplevelListener = SignalListener()
@@ -213,7 +221,7 @@ class WindowManager(val server: Server) {
         destroyListener.connect(wlr_shim_xdg_surface_destroy(xdgSurface)!!)
 
         val newPopupListener = SignalListener()
-        newPopupListener.onSignal = { _, data -> onNewPopup(window, data!!) }
+        newPopupListener.onSignal = { _, data -> onNewPopup(window, null, data!!) }
         newPopupListener.connect(wlr_shim_xdg_surface_new_popup(xdgSurface)!!)
 
         val requestListeners = connectToplevelRequests(window, xdgSurface)
@@ -223,13 +231,17 @@ class WindowManager(val server: Server) {
         )
     }
 
-    private fun onNewPopup(window: Window, data: COpaquePointer) {
+    private fun onNewPopup(window: Window, parent: Popup?, data: COpaquePointer) {
         val xdgPopup = data.reinterpret<wlr_xdg_popup>()
         val popupBase = wlr_shim_xdg_popup_base(xdgPopup) ?: return
         val popupSurface = wlr_shim_xdg_surface_get_surface(popupBase) ?: return
-        val popupTree = wlr_scene_xdg_surface_create(window.contentTree, popupBase) ?: return
+        val sceneParent = parent?.tree ?: window.contentTree
+        val popupTree = wlr_scene_xdg_surface_create(sceneParent, popupBase) ?: return
+        val depth = parent?.depth?.plus(1) ?: 0
 
-        val popup = Popup(popupSurface, popupTree.pointed.node.ptr)
+        val popup = Popup(
+            popupSurface, popupBase, popupTree, popupTree.pointed.node.ptr, depth
+        )
         popups.add(popup)
 
         fun updateGeometry() {
@@ -261,12 +273,35 @@ class WindowManager(val server: Server) {
         }
         commitListener.connect(wlr_shim_surface_commit(popupSurface)!!)
 
+        val mapListener = SignalListener()
+        mapListener.onSignal = { _, _ ->
+            popup.mapped = true
+            updateGeometry()
+        }
+        mapListener.connect(wlr_shim_surface_map(popupSurface)!!)
+
+        val unmapListener = SignalListener()
+        unmapListener.onSignal = { _, _ ->
+            popup.mapped = false
+            server.inputManager.onPopupUnmapped(popup)
+        }
+        unmapListener.connect(wlr_shim_surface_unmap(popupSurface)!!)
+
+        val nestedPopupListener = SignalListener()
+        nestedPopupListener.onSignal = { _, nestedData ->
+            onNewPopup(window, popup, nestedData!!)
+        }
+        nestedPopupListener.connect(wlr_shim_xdg_surface_new_popup(popupBase)!!)
+
         val selfRef = arrayOfNulls<SignalListener>(1)
         val destroyListener = SignalListener()
         selfRef[0] = destroyListener
         destroyListener.onSignal = { _, _ ->
             configureIdle.dispose()
             commitListener.disconnect()
+            mapListener.disconnect()
+            unmapListener.disconnect()
+            nestedPopupListener.disconnect()
             popups.remove(popup)
             server.inputManager.onPopupDestroyed(popup)
             selfRef[0]?.disconnect()
@@ -291,6 +326,7 @@ class WindowManager(val server: Server) {
     }
 
     private fun onDestroy(window: Window) {
+        server.dataDeviceManager.onWindowDestroyed(window)
         window.listeners.forEach { it.disconnect() }
         window.stableRef?.dispose()
         windows.remove(window)

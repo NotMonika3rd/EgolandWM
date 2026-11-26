@@ -31,6 +31,7 @@ class Window(
 
     var borderNode: CPointer<wlr_scene_rect>? = null
     var titleNode: CPointer<wlr_scene_rect>? = null
+    var brightnessNode: CPointer<wlr_scene_rect>? = null
     var clientDecorated: Boolean = true
         private set
 

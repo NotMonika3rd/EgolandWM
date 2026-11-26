@@ -78,6 +78,7 @@ class Server {
     val windowManager = WindowManager(this)
     val layerManager = LayerManager(this)
     val inputManager = InputManager(this)
+    val dataDeviceManager = DataDeviceManager(this)
     val xwaylandManager = XWaylandManager(this)
 
     private val backendDestroyListener = SignalListener()
@@ -157,6 +158,7 @@ class Server {
         windowManager.init()
         layerManager.init()
         inputManager.init()
+        dataDeviceManager.init()
         if (config.xwayland) {
             xwaylandManager.init()
         } else {
@@ -195,6 +197,7 @@ class Server {
         if (display == null) return
         xwaylandManager.dispose()
         inputManager.dispose()
+        dataDeviceManager.dispose()
         layerManager.dispose()
         windowManager.dispose()
         outputManager.dispose()

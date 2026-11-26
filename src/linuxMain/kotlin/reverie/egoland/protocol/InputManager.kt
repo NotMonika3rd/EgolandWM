@@ -126,6 +126,22 @@ class InputManager(val server: Server) {
         lastMinimized = null
     }
 
+    fun cursorPosition(): Pair<Int, Int>? =
+        cursor?.let { it.pointed.x.toInt() to it.pointed.y.toInt() }
+
+    fun onDragStarted() {
+        pointerFocus = null
+        enteredPopup = null
+        cursorPosition()?.let { (x, y) ->
+            pointerTargetAt(x, y)?.let { ensurePointerEnter(it) }
+        }
+    }
+
+    fun onDragEnded() {
+        pointerFocus = null
+        enteredPopup = null
+    }
+
     fun onNewInput(data: COpaquePointer) {
         val device = data.reinterpret<wlr_input_device>()
         when (wlr_shim_input_device_type(device)) {
@@ -237,7 +253,7 @@ class InputManager(val server: Server) {
         }
     }
 
-    fun onPopupDestroyed(popup: Popup) {
+    fun onPopupUnmapped(popup: Popup) {
         if (enteredPopup === popup) enteredPopup = null
         if (pointerFocus == popup.surface) {
             wlr_seat_pointer_clear_focus(server.seat)
@@ -245,9 +261,26 @@ class InputManager(val server: Server) {
         }
     }
 
+    fun onPopupDestroyed(popup: Popup) {
+        onPopupUnmapped(popup)
+    }
+
+    private fun grabbedPopupCoordinates(cx: Int, cy: Int): Pair<Double, Double>? {
+        if (server.dataDeviceManager.dragging) return null
+        if (!wlr_seat_pointer_has_grab(server.seat)) return null
+        val popup = enteredPopup ?: return null
+        popup.updatePosition()
+        return (cx - popup.x + popup.geomX).toDouble() to
+            (cy - popup.y + popup.geomY).toDouble()
+    }
+
     private fun afterCursorMove(time: UInt) {
         val cx = cursor!!.pointed.x.toInt()
         val cy = cursor!!.pointed.y.toInt()
+
+        if (server.dataDeviceManager.dragging) {
+            server.dataDeviceManager.updateDragVisuals(cx, cy)
+        }
 
         when (val it = interaction) {
             is Interaction.Move -> it.window.configureGeometry(
@@ -257,19 +290,20 @@ class InputManager(val server: Server) {
 
             is Interaction.Resize -> applyResize(it, cx, cy)
             is Interaction.None -> {
+                val grabbed = grabbedPopupCoordinates(cx, cy)
+                if (grabbed != null) {
+                    lastSx = grabbed.first
+                    lastSy = grabbed.second
+                    wlr_seat_pointer_notify_motion(server.seat, time, lastSx, lastSy)
+                    wlr_seat_pointer_notify_frame(server.seat)
+                    return
+                }
+
                 val target = pointerTargetAt(cx, cy)
                 if (target != null) {
                     lastSx = target.sx
                     lastSy = target.sy
-                }
-                if (target?.popup != null) ensurePointerEnter(target)
-                if (wlr_seat_pointer_has_grab(server.seat)) {
-                    wlr_seat_pointer_notify_motion(
-                        server.seat, time, target?.sx ?: lastSx, target?.sy ?: lastSy
-                    )
-                    wlr_seat_pointer_notify_frame(server.seat)
-                } else if (target != null) {
-                    if (target.popup == null) ensurePointerEnter(target)
+                    ensurePointerEnter(target)
                     wlr_seat_pointer_notify_motion(server.seat, time, target.sx, target.sy)
                     wlr_seat_pointer_notify_frame(server.seat)
                 } else {
@@ -316,10 +350,6 @@ class InputManager(val server: Server) {
         val cx = cursor!!.pointed.x.toInt()
         val cy = cursor!!.pointed.y.toInt()
         val target = pointerTargetAt(cx, cy)
-        if (target?.popup != null) {
-            lastSx = target.sx
-            lastSy = target.sy
-        }
         val grabbing = wlr_seat_pointer_has_grab(server.seat)
         val newPopupTarget = target?.popup != null && enteredPopup !== target.popup
         if (target?.popup != null) {
@@ -335,7 +365,13 @@ class InputManager(val server: Server) {
             }
         }
         val time = wlr_shim_button_event_time(data)
-        if (newPopupTarget) {
+        val grabbed = if (grabbing) grabbedPopupCoordinates(cx, cy) else null
+        if (grabbed != null) {
+            lastSx = grabbed.first
+            lastSy = grabbed.second
+            wlr_seat_pointer_notify_motion(server.seat, time, lastSx, lastSy)
+            wlr_seat_pointer_notify_frame(server.seat)
+        } else if (newPopupTarget) {
             wlr_seat_pointer_notify_motion(server.seat, time, target.sx, target.sy)
             wlr_seat_pointer_notify_frame(server.seat)
         }

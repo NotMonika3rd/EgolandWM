@@ -432,3 +432,35 @@ void wlr_shim_seat_keyboard_enter_with_modifiers(struct wlr_seat *seat,
         keyboard != NULL ? &keyboard->modifiers : NULL;
     wlr_seat_keyboard_notify_enter(seat, surface, NULL, 0, modifiers);
 }
+
+struct wl_signal *wlr_shim_seat_request_set_selection(struct wlr_seat *seat) {
+    return &seat->events.request_set_selection;
+}
+
+struct wl_signal *wlr_shim_seat_request_start_drag(struct wlr_seat *seat) {
+    return &seat->events.request_start_drag;
+}
+
+struct wl_signal *wlr_shim_drag_focus(struct wlr_drag *drag) {
+    return &drag->events.focus;
+}
+
+struct wl_signal *wlr_shim_drag_motion(struct wlr_drag *drag) {
+    return &drag->events.motion;
+}
+
+struct wl_signal *wlr_shim_drag_destroy(struct wlr_drag *drag) {
+    return &drag->events.destroy;
+}
+
+struct wlr_data_source *wlr_shim_drag_source(struct wlr_drag *drag) {
+    return drag->source;
+}
+
+struct wlr_drag_icon *wlr_shim_drag_icon(struct wlr_drag *drag) {
+    return drag->icon;
+}
+
+struct wlr_surface *wlr_shim_drag_icon_surface(struct wlr_drag_icon *icon) {
+    return icon->surface;
+}
